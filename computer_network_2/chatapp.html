@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <link
+        href="https://cdn.jsdelivr.net/npm/@mdi/font@4.x/css/materialdesignicons.min.css"
+        rel="stylesheet"
+        />
+    <link
+        href="https://cdn.jsdelivr.net/npm/vuetify@3.0.5/dist/vuetify.min.css"
+        rel="stylesheet"
+        />
+    <title>Vue Chat</title>
+    <link rel="icon" type="image/ico" href="https://vuetifyjs.com/favicon.ico" />
+</head>
+  <body>
+    <div id="app"></div>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vuetify@3.0.5/dist/vuetify.min.js"></script>
+    <script type="text/x-template" id="app-template">
+    <v-app>
+        <v-container id="chat_room">
+            <v-row>
+                <v-col cols="12" md="6">
+                    <v-card class="mx-auto" max-width="450" prepend-icon="mdi-chat" title="Chat Room">
+                        <v-card-text>
+                            <v-list>
+                                <v-list-item  v-model="messages" v-for="message in messages " :key="message.id">
+                                    <v-list-item-content>
+                                        <v-list-item-title>{{ message }}</v-list-item-title>
+                                    </v-list-item-content>
+                                </v-list-item>
+                            </v-list>
+                        </v-card-text>
+                        <v-card-actions>
+                            <v-text-field
+                                v-model="message"
+                                label="Message"
+                                :append-icon="message ? 'mdi-send' : 'mdi-microphone'"
+                                single-line
+                                hide-details
+                                clearable
+                                @click:append="sendMessage"
+                                @keydown.enter="sendMessage"
+                                ></v-text-field>
+                        </v-card-actions>
+                    </v-card>
+                </v-col>
+            </v-row>
+        </v-container>
+        <v-snackbar v-model="snackbar" :timeout="timeout" color="blue-grey" rounded="pill">
+            message sent!
+        </v-snackbar>
+    </v-app>
+    </script>
+    <script>
+        const { createApp, ref } = Vue;
+        const { createVuetify } = Vuetify;
+        const vuetify = createVuetify();
+        
+        // Create Websocket connection
+        const socket = new WebSocket("ws://localhost:8080/ws"); //如果要對外開放要先知道server的ip 然後更改這邊的ip
+        socket.onopen = () => {
+            console.log("Connected to websocket");
+        };
+
+        const snackbar = ref(false);
+        const timeout = ref(2000);
+        const message = ref("");
+        const messages = ref([]);
+
+        socket.onmessage = (e) => {
+            console.log('接受到信息', e.data );
+            messages.value.push(e.data);
+        }
+
+        const app = createApp({
+        template: "#app-template",
+        data() {
+            return {
+            message: message.value,
+            messages: messages.value,
+            snackbar: snackbar.value,
+            timeout: timeout.value,
+            };
+        },
+        methods: {
+            sendMessage() {
+            if (this.message) {
+                socket.send(this.message);
+                this.message = "send!";
+                if (this.message) {
+                    this.snackbar = true;
+                    this.message = "";
+                }
+            }
+            },
+        },
+        })
+        .use(vuetify)
+        .mount("#app");
+    </script>
+  </body>
+</html>
